@@ -1,0 +1,83 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Authentication & Secrets
+oauth_token.pickle
+oauth_credentials.json
+client_secret_*.json
+thesis-harvester-key.json
+*.pem
+*.key
+
+# Google Cloud
+.gcloud/
+credentials.json
+
+# Output files
+*.png
+*.html
+weather_impact_map.*
+weather_fronts_map.*
+dno_gsp_map.*
+dno_map_*.png
+wind_farm_weather_*.json
+*.log
+
+# Large data files
+*.geojson
+geojson_exports/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# JSON data exports
+*_20*.json
+contradictory_*.json
+amendments_*.json
+appeals_*.json
+costs_*.json
+particulars_*.json
+claimant_*.json
+
+# CSV files
+*.csv
+
+# Backup files
+*_backup_*.py
+*_backup_*.gs
+
+# Chrome/Selenium
+chromedriver
+.chromedriver/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation builds
+docs/_build/
+
+# Test files
+test_*.py
+*_test.py
