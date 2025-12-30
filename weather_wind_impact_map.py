@@ -31,6 +31,7 @@ MAP_CONFIG = {
     'show_wind': True,
     'show_weather_impacts': True,  # Color-code by weather status
     'show_weather_fronts': True,   # Show pressure systems and fronts
+    'show_interconnectors': True,  # Show power interconnectors
     'center': [54.5, -2.5],
     'zoom': 6.5
 }
@@ -39,6 +40,7 @@ MAP_CONFIG = {
 DNO_GEOJSON = 'geojson_exports/dno_boundaries.geojson'
 GSP_GEOJSON = 'geojson_exports/gsp_boundaries.geojson'
 WIND_GEOJSON = 'geojson_exports/offshore_wind_farms.geojson'
+INTERCONNECTORS_JSON = 'interconnectors.json'
 
 # OAuth settings
 SCOPES = ['https://www.googleapis.com/auth/drive.file',
@@ -257,6 +259,91 @@ def generate_weather_impact_map():
                 weight=4
             ).add_to(m)
     
+    # Add interconnectors if enabled
+    if MAP_CONFIG['show_interconnectors']:
+        print("🔌 Adding power interconnectors...")
+        
+        try:
+            with open(INTERCONNECTORS_JSON, 'r') as f:
+                interconnectors = json.load(f)
+            
+            # Color coding by status
+            status_colors = {
+                'operational': '#27ae60',      # Green
+                'under_construction': '#f39c12',  # Orange
+                'proposed': '#95a5a6'          # Grey
+            }
+            
+            for ic in interconnectors:
+                from_coords = ic['from_coords']
+                to_coords = ic['to_coords']
+                name = ic['name']
+                capacity_mw = ic['capacity_mw']
+                status = ic['status']
+                from_loc = ic['from_location']
+                to_loc = ic['to_location']
+                to_country = ic['to_country']
+                commissioned = ic.get('commissioned', 'N/A')
+                
+                color = status_colors.get(status, '#95a5a6')
+                
+                # Draw the interconnector line
+                folium.PolyLine(
+                    locations=[from_coords, to_coords],
+                    color=color,
+                    weight=4,
+                    opacity=0.8,
+                    popup=folium.Popup(f"""
+                        <div style="font-family: Arial; min-width: 280px;">
+                            <h3 style="margin: 0 0 10px 0; color: {color};">{name}</h3>
+                            <table style="width: 100%; font-size: 12px;">
+                                <tr><td><b>Capacity:</b></td><td>{capacity_mw} MW</td></tr>
+                                <tr><td><b>Status:</b></td><td style="color: {color};">{status.replace('_', ' ').title()}</td></tr>
+                                <tr><td><b>Commissioned:</b></td><td>{commissioned}</td></tr>
+                                <tr><td colspan="2" style="padding-top: 10px;"><b>Route:</b></td></tr>
+                                <tr><td><b>From:</b></td><td>{from_loc}</td></tr>
+                                <tr><td><b>To:</b></td><td>{to_loc}</td></tr>
+                                <tr><td><b>Connection:</b></td><td>UK ↔ {to_country}</td></tr>
+                            </table>
+                        </div>
+                    """, max_width=320),
+                    tooltip=f"{name}: {capacity_mw} MW (UK ↔ {to_country})"
+                ).add_to(m)
+                
+                # Add start/end markers
+                # UK end (green)
+                folium.CircleMarker(
+                    location=from_coords,
+                    radius=8,
+                    popup=f"<b>{name}</b><br>{from_loc}<br>UK Terminal",
+                    tooltip=f"{from_loc}",
+                    color='#27ae60',
+                    fill=True,
+                    fillColor='#2ecc71',
+                    fillOpacity=0.9,
+                    weight=3
+                ).add_to(m)
+                
+                # Foreign end (blue)
+                folium.CircleMarker(
+                    location=to_coords,
+                    radius=8,
+                    popup=f"<b>{name}</b><br>{to_loc}<br>{to_country} Terminal",
+                    tooltip=f"{to_loc}",
+                    color='#3498db',
+                    fill=True,
+                    fillColor='#5dade2',
+                    fillOpacity=0.9,
+                    weight=3
+                ).add_to(m)
+            
+            print(f"   ✓ Added {len(interconnectors)} interconnectors")
+            
+        except FileNotFoundError:
+            print(f"   ⚠️  Interconnectors file not found: {INTERCONNECTORS_JSON}")
+        except Exception as e:
+            print(f"   ⚠️  Error loading interconnectors: {e}")
+    
     # Add weather fronts and pressure systems
     if MAP_CONFIG['show_weather_fronts'] and front_tracker:
         print("🌀 Adding weather fronts and pressure systems...")
@@ -298,6 +385,14 @@ def generate_weather_impact_map():
         <p style="margin: 5px 0; font-size: 15px;"><span style="color: #FF0000; font-weight: bold; font-size: 20px;">H</span> High Pressure | <span style="color: #0000FF; font-weight: bold; font-size: 20px;">L</span> Low Pressure</p>
         <p style="margin: 5px 0; font-size: 15px;"><span style="color: #0000FF; font-size: 18px;">▼</span> Cold Front | <span style="color: #FF0000; font-size: 18px;">▲</span> Warm Front</p>
         <p style="margin: 5px 0; font-size: 18px;">☀☁🌧❄⛈ Weather | ↑→↓← Wind</p>
+        """
+    
+    if MAP_CONFIG['show_interconnectors']:
+        legend_html += """
+        <p style="margin: 15px 0 8px 0; font-weight: bold;">Interconnectors:</p>
+        <p style="margin: 5px 0; font-size: 15px;"><span style="color: #27ae60; font-size: 18px;">━━</span> Operational</p>
+        <p style="margin: 5px 0; font-size: 15px;"><span style="color: #f39c12; font-size: 18px;">━━</span> Under Construction</p>
+        <p style="margin: 5px 0; font-size: 15px;"><span style="color: #95a5a6; font-size: 18px;">━━</span> Proposed</p>
         """
     
     legend_html += f"""
