@@ -1,0 +1,23 @@
+# Energy Thesis Harvester - Python Dependencies
+
+# Core web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Google Cloud APIs
+google-auth>=2.25.0
+google-auth-oauthlib>=1.1.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.110.0
+google-cloud-bigquery>=3.14.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# For async version (optional)
+aiohttp>=3.9.0
+aiofiles>=23.2.0
+
+# Progress bars (optional)
+tqdm>=4.66.0
