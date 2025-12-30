@@ -1,16 +1,77 @@
-# Energy Thesis Harvester 🎓⚡
+# UK Offshore Wind Farm Weather Impact System
 
-Automated system to download, catalog, and index open-access PhD theses related to energy from major universities worldwide.
+Real-time weather monitoring and operational impact forecasting for UK offshore wind farms with power interconnector visualization.
 
 ## Features ✨
 
-- **9 Major Repositories**: Harvard, MIT, Cambridge, Oxford, UCL, Imperial, Edinburgh, CORE, British Library EThOS
-- **Smart Filtering**: Only downloads energy-related theses using keyword matching
-- **Metadata Extraction**: Captures title, author, year, university from institutional metadata
-- **Google Drive Integration**: Uploads PDFs to specified Drive folder
-- **Google Sheets Logging**: Maintains comprehensive spreadsheet log
-- **BigQuery Indexing**: Creates searchable database for analytics and dashboards
-- **Duplicate Prevention**: Maintains local log to avoid re-downloading
+- **🌦️ Real-time Weather:** Live data from Open-Meteo API (free, no key required)
+- **⚡ Wind Farm Monitoring:** 15 major offshore wind farms (11.57 GW total capacity)
+- **🔌 Power Interconnectors:** 12 subsea cables to Europe (10.8 GW capacity)
+- **🗺️ DNO & GSP Boundaries:** UK distribution network operator regions and grid supply points
+- **📰 Meteorological Symbols:** Newspaper-style weather fronts, pressure systems, wind arrows
+- **🎯 Impact Analysis:** Predicts shutdowns, icing risk, sub-optimal conditions
+- **📊 Google Sheets Integration:** Automated dashboard updates via OAuth
+- **📈 12-Hour Forecasting:** Hourly predictions with ETA for weather events
+- **🎨 High-Resolution Maps:** 7680×7680 pixel professional visualizations
+
+**Live Dashboard:** [View on Google Sheets](https://docs.google.com/spreadsheets/d/12LaxizI4ASJduSMRYasrQEBvIku3YDiE3wbjanaIFyI)
+
+## 🚀 Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/GeorgeDoors888/uk-wind-weather-impact.git
+cd uk-wind-weather-impact
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the main system
+python weather_wind_impact_map.py
+
+# Or generate all map variants
+python generate_all_maps.py
+```
+
+## 📦 What's Included
+
+### Core Components
+- ✅ **weather_fetcher.py** - Real-time weather data from Open-Meteo
+- ✅ **wind_impact_analyzer.py** - Operational impact analysis
+- ✅ **weather_front_tracker.py** - Meteorological front detection
+- ✅ **weather_wind_impact_map.py** - Main orchestration script
+- ✅ **generate_all_maps.py** - Create multiple specialized map views
+
+### Data Files
+- ✅ **interconnectors.json** - 12 UK power interconnectors
+- ✅ **geojson_exports/offshore_wind_farms.geojson** - 15 offshore wind farms
+- ✅ **geojson_exports/dno_boundaries.geojson** - 14 DNO regions
+- ✅ **geojson_exports/gsp_boundaries.geojson** - 100 GSP areas
+
+### Documentation
+- ✅ **WEATHER_IMPACT_SYSTEM_DOCUMENTATION.md** - Complete system guide
+- ✅ **INTERCONNECTORS_GUIDE.md** - Power interconnector reference
+- ✅ **COLLABORATION_GUIDE.md** - Team collaboration setup
+
+## 🔌 Power Interconnectors
+
+The system visualizes 12 UK power interconnectors:
+
+| Connection | Capacity | Status |
+|------------|----------|--------|
+| France (IFA, IFA2, ElecLink) | 4,000 MW | Operational |
+| Norway (North Sea Link) | 1,400 MW | Operational |
+| Denmark (Viking Link) | 1,400 MW | Operational |
+| Netherlands (BritNed) | 1,000 MW | Operational |
+| Belgium (Nemo Link) | 1,000 MW | Operational |
+| Germany (NeuConnect) | 1,400 MW | Under Construction |
+| Ireland (EWIC, Greenlink) | 1,000 MW | 1 operational, 1 under construction |
+| N. Ireland (Moyle) | 500 MW | Operational |
+| Iceland (IceLink) | 1,000 MW | Proposed |
+
+**Total Capacity:** 10.8 GW (7.9 GW operational)
+
+See [INTERCONNECTORS_GUIDE.md](INTERCONNECTORS_GUIDE.md) for full details.
 
 ## Prerequisites 📋
 
@@ -18,63 +79,22 @@ Automated system to download, catalog, and index open-access PhD theses related 
 2. **Google Cloud Project** with:
    - Drive API enabled
    - Sheets API enabled
-   - BigQuery API enabled
-3. **Service Account** with permissions:
-   - Drive: Editor
-   - Sheets: Editor
-   - BigQuery: Data Editor
+   - BigQuery API enabled (optional, for historical data)
+3. **OAuth 2.0 Credentials:**
+   - Create Desktop Application credentials
+   - Download as `oauth_credentials.json`
 
 ## Setup Instructions 🚀
 
 ### 1. Google Cloud Setup
 
-#### Create a Google Cloud Project
+#### Create OAuth Credentials
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create new project: `jibber-jabber-knowledge` (or your preferred name)
-3. Note your Project ID
-
-#### Enable Required APIs
-```bash
-# Enable APIs via Cloud Console or gcloud CLI:
-gcloud services enable drive.googleapis.com
-gcloud services enable sheets.googleapis.com
-gcloud services enable bigquery.googleapis.com
-```
-
-#### Create Service Account
-1. Go to **IAM & Admin** → **Service Accounts**
-2. Click **Create Service Account**
-3. Name: `thesis-harvester`
-4. Grant roles:
-   - BigQuery Data Editor
-   - (Drive/Sheets permissions are via sharing, not IAM)
-5. Click **Done**
-6. Click on the service account → **Keys** tab
-7. **Add Key** → **Create New Key** → **JSON**
-8. Save the JSON file securely (e.g., `service-account-key.json`)
-
-#### Create Google Drive Folder
-1. Create a folder in Google Drive (e.g., "Energy Theses")
-2. Right-click → **Share**
-3. Add your service account email (found in the JSON file: `client_email`)
-4. Give it **Editor** permissions
-5. Copy the folder ID from URL: `https://drive.google.com/drive/folders/[FOLDER_ID]`
-
-#### Create Google Sheet
-1. Create a new Google Sheet (e.g., "Thesis Harvest Log")
-2. Share with service account email (Editor permissions)
-3. Copy Sheet ID from URL: `https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit`
-
-#### Create BigQuery Dataset
-```bash
-# Via gcloud CLI:
-bq mk --dataset jibber-jabber-knowledge:thesis_index
-
-# Or via Cloud Console:
-# BigQuery → SQL Workspace → Create Dataset
-# Dataset ID: thesis_index
-# Location: US (or your preference)
-```
+2. Select your project
+3. Navigate to **APIs & Services** → **Credentials**
+4. Click **Create Credentials** → **OAuth client ID**
+5. Application type: **Desktop app**
+6. Download JSON and save as `oauth_credentials.json`
 
 ### 2. Local Setup
 
