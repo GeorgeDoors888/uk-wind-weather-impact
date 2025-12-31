@@ -410,8 +410,8 @@ def generate_weather_impact_map():
 
 
 def capture_screenshot(html_file: str, output_png: str = 'weather_impact_map.png'):
-    """Capture high-resolution screenshot of the map"""
-    print("\n📸 Capturing screenshot...")
+    """Capture high-resolution screenshot of the map with quality optimization"""
+    print("\n📸 Capturing high-quality screenshot...")
     
     chrome_options = Options()
     chrome_options.add_argument('--headless=new')
@@ -419,6 +419,9 @@ def capture_screenshot(html_file: str, output_png: str = 'weather_impact_map.png
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--window-size=3840,3840')
     chrome_options.add_argument('--force-device-scale-factor=2')
+    # Add quality flags
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--disable-software-rasterizer')
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -427,10 +430,35 @@ def capture_screenshot(html_file: str, output_png: str = 'weather_impact_map.png
     driver.get(file_url)
     time.sleep(5)
     
-    driver.save_screenshot(output_png)
+    # Save initial screenshot
+    temp_png = output_png + '.temp.png'
+    driver.save_screenshot(temp_png)
     driver.quit()
     
+    # Optimize image with Pillow for better quality
+    print("   🎨 Optimizing image quality...")
+    img = Image.open(temp_png)
+    
+    # Convert to RGB if necessary
+    if img.mode in ('RGBA', 'LA', 'P'):
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        img = background
+    
+    # Save with high quality settings
+    img.save(output_png, 'PNG', optimize=True, compress_level=6)
+    
+    # Remove temp file
+    os.remove(temp_png)
+    
+    # Get file size
+    file_size_mb = os.path.getsize(output_png) / (1024 * 1024)
+    print(f"   ✓ Resolution: {img.size[0]}×{img.size[1]} pixels")
+    print(f"   ✓ File size: {file_size_mb:.2f} MB")
     print(f"✅ Screenshot saved: {output_png}")
+    
     return output_png
 
 
@@ -468,32 +496,150 @@ def upload_to_drive_oauth(file_path: str, creds):
 
 
 def insert_image_in_sheet(image_url: str, creds, sheet_name: str = 'Weather Impact Map'):
-    """Insert image in Google Sheet"""
-    print("\n📊 Inserting into Sheet...")
+    """Insert image in Google Sheet with optimized layout and quality"""
+    print("\n📊 Inserting into Sheet with optimized layout...")
     
     sheets_service = build('sheets', 'v4', credentials=creds)
     
-    # Create or clear the sheet
-    try:
-        sheets_service.spreadsheets().batchUpdate(
+    # Get sheet ID for the target sheet
+    spreadsheet = sheets_service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
+    sheet_id = None
+    
+    # Find or create the sheet
+    for sheet in spreadsheet.get('sheets', []):
+        if sheet['properties']['title'] == sheet_name:
+            sheet_id = sheet['properties']['sheetId']
+            break
+    
+    if sheet_id is None:
+        # Create new sheet
+        response = sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=SPREADSHEET_ID,
             body={'requests': [{'addSheet': {'properties': {'title': sheet_name}}}]}
         ).execute()
-    except:
+        sheet_id = response['replies'][0]['addSheet']['properties']['sheetId']
+        print(f"   Created new sheet: '{sheet_name}'")
+    else:
+        # Clear existing content
         sheets_service.spreadsheets().values().clear(
             spreadsheetId=SPREADSHEET_ID,
             range=f'{sheet_name}!A1:Z1000'
         ).execute()
+        print(f"   Cleared existing sheet: '{sheet_name}'")
     
-    # Insert image formula
+    # Optimize sheet layout for image display
+    requests = [
+        # 1. Set column A width to 1400 pixels (optimal for high-res image)
+        {
+            'updateDimensionProperties': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'dimension': 'COLUMNS',
+                    'startIndex': 0,
+                    'endIndex': 1
+                },
+                'properties': {
+                    'pixelSize': 1400
+                },
+                'fields': 'pixelSize'
+            }
+        },
+        # 2. Set rows 1-30 height to 1400 pixels total (distributed)
+        {
+            'updateDimensionProperties': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'dimension': 'ROWS',
+                    'startIndex': 0,
+                    'endIndex': 30
+                },
+                'properties': {
+                    'pixelSize': 47  # 30 rows × 47px ≈ 1400px
+                },
+                'fields': 'pixelSize'
+            }
+        },
+        # 3. Hide gridlines for cleaner appearance
+        {
+            'updateSheetProperties': {
+                'properties': {
+                    'sheetId': sheet_id,
+                    'gridProperties': {
+                        'hideGridlines': True
+                    }
+                },
+                'fields': 'gridProperties.hideGridlines'
+            }
+        },
+        # 4. Set sheet background to white
+        {
+            'updateSheetProperties': {
+                'properties': {
+                    'sheetId': sheet_id,
+                    'tabColor': {
+                        'red': 0.2,
+                        'green': 0.6,
+                        'blue': 0.86
+                    }
+                },
+                'fields': 'tabColor'
+            }
+        }
+    ]
+    
+    sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=SPREADSHEET_ID,
+        body={'requests': requests}
+    ).execute()
+    
+    print("   ✓ Optimized sheet dimensions (1400×1400 px)")
+    print("   ✓ Hidden gridlines for cleaner view")
+    print("   ✓ Set tab color (blue)")
+    
+    # Insert high-quality image with IMAGE formula
+    # Mode 1 = Size to fit (maintains aspect ratio)
+    # Mode 2 = Stretch to fit
+    # Mode 3 = Original size
+    # Mode 4 = Custom size (we'll use 1 for best quality)
     sheets_service.spreadsheets().values().update(
         spreadsheetId=SPREADSHEET_ID,
         range=f'{sheet_name}!A1',
         valueInputOption='USER_ENTERED',
-        body={'values': [[f'=IMAGE("{image_url}")']]}
+        body={'values': [[f'=IMAGE("{image_url}", 1)']]}  # Mode 1: Fit with aspect ratio
     ).execute()
     
-    print(f"✅ Image inserted in '{sheet_name}' tab!")
+    print(f"   ✓ Inserted image with =IMAGE() formula (fit mode)")
+    
+    # Format cell A1 for optimal display
+    format_requests = [
+        {
+            'repeatCell': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': 0,
+                    'endRowIndex': 1,
+                    'startColumnIndex': 0,
+                    'endColumnIndex': 1
+                },
+                'cell': {
+                    'userEnteredFormat': {
+                        'horizontalAlignment': 'CENTER',
+                        'verticalAlignment': 'MIDDLE',
+                        'wrapStrategy': 'CLIP'
+                    }
+                },
+                'fields': 'userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy)'
+            }
+        }
+    ]
+    
+    sheets_service.spreadsheets().batchUpdate(
+        spreadsheetId=SPREADSHEET_ID,
+        body={'requests': format_requests}
+    ).execute()
+    
+    print(f"   ✓ Centered and formatted image cell")
+    print(f"\n✅ Image optimally inserted in '{sheet_name}' tab!")
 
 
 def main():
